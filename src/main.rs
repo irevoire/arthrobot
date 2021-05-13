@@ -1,9 +1,13 @@
-#![feature(str_split_once)]
+#![feature(async_closure)]
 
 mod commands;
+mod handle_reaction;
+mod score;
 
 use crate::commands::*;
+use score::Score;
 use serenity::{
+    client::bridge::gateway::ShardManager,
     async_trait,
     framework::{
         standard::macros::{help, hook},
@@ -14,19 +18,24 @@ use serenity::{
     model::prelude::*,
     prelude::*,
 };
-use std::{collections::HashSet, env};
+use std::{collections::HashSet, env, sync::Arc};
+
+struct ShardManagerContainer;
+
+impl TypeMapKey for ShardManagerContainer {
+    type Value = Arc<Mutex<ShardManager>>;
+}
 
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        if let Ok(user) = reaction.user(&ctx).await {
-            if user.has_role(&ctx, reaction.guild_id.unwrap(), 783333213854629958).await.unwrap() {
-                println!("user has role crémeux");
-            }
+        let e = handle_reaction::handle_reaction(ctx, reaction).await;
+        match e {
+            Err(e) => eprintln!("{:?}", e),
+            _ => (),
         }
-        println!("reaction_add called with {:?}", reaction);
     }
 
     async fn ready(&self, _: Context, ready: Ready) {
@@ -118,19 +127,13 @@ async fn main() {
         .await
         .expect("Err creating client");
 
-    let shard_manager = client.shard_manager.clone();
+    {
+        let mut data = client.data.write().await;
+        data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+        data.insert::<Score>(Score::typemapkey_score());
+    }
 
-    let _ = Interaction::create_global_application_command(&http, *bot_id.as_u64(), |a| {
-        a.name("ping")
-            .description("A simple ping command")
-            .create_interaction_option(|o| {
-                o.name("to_say")
-                    .description("What will be echoed")
-                    .kind(ApplicationCommandOptionType::String)
-                    .required(true)
-            })
-    })
-    .await;
+    let shard_manager = client.shard_manager.clone();
 
     tokio::spawn(async move {
         tokio::signal::ctrl_c()
