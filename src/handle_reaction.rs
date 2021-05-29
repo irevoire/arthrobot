@@ -36,6 +36,13 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) -> CommandResult 
 
             let res = crate::airtable::update_score(&winner, |score| score + points).await?;
 
+            reaction
+                .message(&ctx)
+                .await?
+                .react(&ctx, "👍".parse::<ReactionType>().unwrap())
+                .await?;
+            reaction.delete(&ctx).await?;
+
             let channel: ChannelId = crate::SALON_BOT.into();
             channel
                 .send_message(&ctx, |m| {

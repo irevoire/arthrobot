@@ -3,6 +3,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::model::prelude::User;
 
+const TABLE_NAME: &str = "Score";
+
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Score {
@@ -15,7 +17,7 @@ pub async fn get_scores() -> Result<Vec<Score>> {
     let airtable_table_id = std::env::var("AIRTABLE_TABLE_ID").unwrap();
     let airtable = Airtable::new(airtable_api_key, airtable_table_id, "");
     let records: Vec<Record<Score>> = airtable
-        .list_records("Test", "Grid view", vec!["Id", "Score"])
+        .list_records(TABLE_NAME, "Grid view", vec!["Id", "Score"])
         .await?;
 
     Ok(records.iter().map(|record| record.fields.clone()).collect())
@@ -34,7 +36,7 @@ pub async fn update_score(user: &User, update: impl Fn(isize) -> isize) -> Resul
     let airtable_table_id = std::env::var("AIRTABLE_TABLE_ID").unwrap();
     let airtable = Airtable::new(airtable_api_key, airtable_table_id, "");
     let records: Vec<Record<CompleteScore>> = airtable
-        .list_records("Test", "Grid view", vec!["Id", "Score", "Name"])
+        .list_records(TABLE_NAME, "Grid view", vec!["Id", "Score", "Name"])
         .await?;
     let record = records
         .into_iter()
@@ -44,7 +46,7 @@ pub async fn update_score(user: &User, update: impl Fn(isize) -> isize) -> Resul
         record.fields.name = user.name.clone();
         record.fields.score = update(record.fields.score);
         let res = record.fields.score;
-        airtable.update_records("Test", vec![record]).await?;
+        airtable.update_records(TABLE_NAME, vec![record]).await?;
         Ok(res)
     } else {
         let record = Record {
@@ -57,7 +59,7 @@ pub async fn update_score(user: &User, update: impl Fn(isize) -> isize) -> Resul
             created_time: None,
         };
         let res = record.fields.score;
-        airtable.create_records("Test", vec![record]).await?;
+        airtable.create_records(TABLE_NAME, vec![record]).await?;
         Ok(res)
     }
 }

@@ -85,7 +85,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
 }
 
 #[group]
-#[commands(leaderboard, set, add)]
+#[commands(leaderboard, score, set, add)]
 struct General;
 
 #[tokio::main]

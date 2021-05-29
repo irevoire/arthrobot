@@ -1,7 +1,10 @@
 use anyhow::anyhow;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{id::UserId, prelude::User},
+    model::{
+        id::UserId,
+        prelude::{ReactionType, User},
+    },
     utils::Colour,
 };
 use serenity::{model::channel::Message, prelude::Context};
@@ -11,7 +14,7 @@ use serenity::{model::channel::Message, prelude::Context};
 #[usage("{how much score do you want}")]
 #[example("")]
 #[example("20")]
-pub async fn leaderboard(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let scores = crate::airtable::get_scores().await?;
 
     let mut points = Vec::<(Option<User>, isize)>::new();
@@ -27,9 +30,11 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, _args: Args) -> CommandRe
     }
     points.sort_by_key(|(_user, score)| *score);
     points.reverse();
-    let turbo_string = points.iter().enumerate().take(10).fold(
-        String::new(),
-        |mut acc, (position, (user, score))| {
+    let turbo_string = points
+        .iter()
+        .enumerate()
+        .take(args.single::<usize>().unwrap_or(10))
+        .fold(String::new(), |mut acc, (position, (user, score))| {
             if let Some(user) = user {
                 acc.push_str(&format!(
                     "{}) {} – **{}** points\n",
@@ -46,8 +51,7 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, _args: Args) -> CommandRe
                 ));
             }
             acc
-        },
-    );
+        });
 
     msg.channel_id
         .send_message(&ctx, |m| {
@@ -64,6 +68,40 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, _args: Args) -> CommandRe
         })
         .await?;
 
+    Ok(())
+}
+
+#[command]
+#[description = r#"Get the score of a specific user. If no user is specified it returns your score"#]
+#[usage("{user}")]
+#[example("")]
+#[example("@Tamo")]
+pub async fn score(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user: UserId = args.single().unwrap_or_else(|_| msg.author.id);
+    let user = user.to_user(&ctx).await?;
+    let author = &msg.author;
+
+    let scores = crate::airtable::get_scores().await?;
+    let score = scores
+        .iter()
+        .find(|score| score.id == user.id.as_u64().to_string())
+        .map(|score| score.score)
+        .unwrap_or(0);
+    msg.channel_id
+        .send_message(&ctx, |m| {
+            m.embed(|e| {
+                e.title(&user.name)
+                    .thumbnail(user.face())
+                    .field("Balance", format!("{} points", score), false)
+                    .footer(|f| f.icon_url(author.face()).text(author.name.clone()))
+                    .colour(Colour::from_rgb(
+                        *author.id.as_u64() as u8,
+                        (*author.id.as_u64() >> 8) as u8,
+                        (*author.id.as_u64() >> 16) as u8,
+                    ))
+            })
+        })
+        .await?;
     Ok(())
 }
 
@@ -108,6 +146,8 @@ pub async fn set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         |_| score,
     )
     .await?;
+    msg.react(&ctx, "👍".parse::<ReactionType>().unwrap())
+        .await?;
     Ok(())
 }
 
@@ -152,5 +192,7 @@ pub async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         |current| current + score,
     )
     .await?;
+    msg.react(&ctx, "👍".parse::<ReactionType>().unwrap())
+        .await?;
     Ok(())
 }
