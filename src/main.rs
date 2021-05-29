@@ -1,14 +1,13 @@
 #![feature(async_closure)]
 
+mod airtable;
 mod commands;
 mod handle_reaction;
-mod score;
 
 use crate::commands::*;
-use score::Score;
 use serenity::{
-    client::bridge::gateway::ShardManager,
     async_trait,
+    client::bridge::gateway::ShardManager,
     framework::{
         standard::macros::{help, hook},
         standard::{help_commands, macros::group, Args, CommandGroup, CommandResult, HelpOptions},
@@ -20,8 +19,12 @@ use serenity::{
 };
 use std::{collections::HashSet, env, sync::Arc};
 
-struct ShardManagerContainer;
+pub const ROLE_CREMISSIME: u64 = 739887430345162862;
+pub const ROLE_CREMEUX: u64 = 783333213854629958;
 
+pub const SALON_BOT: u64 = 829344188344172585;
+
+struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
@@ -32,9 +35,8 @@ struct Handler;
 impl EventHandler for Handler {
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         let e = handle_reaction::handle_reaction(ctx, reaction).await;
-        match e {
-            Err(e) => eprintln!("{:?}", e),
-            _ => (),
+        if let Err(e) = e {
+            eprintln!("{:?}", e);
         }
     }
 
@@ -83,7 +85,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
 }
 
 #[group]
-#[commands(leaderboard)]
+#[commands(leaderboard, set, add)]
 struct General;
 
 #[tokio::main]
@@ -126,12 +128,6 @@ async fn main() {
         .framework(framework)
         .await
         .expect("Err creating client");
-
-    {
-        let mut data = client.data.write().await;
-        data.insert::<ShardManagerContainer>(client.shard_manager.clone());
-        data.insert::<Score>(Score::typemapkey_score());
-    }
 
     let shard_manager = client.shard_manager.clone();
 
