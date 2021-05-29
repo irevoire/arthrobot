@@ -14,14 +14,11 @@ use serenity::{model::channel::Message, prelude::Context};
 #[example("20")]
 pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let typing = Typing::start(ctx.http.clone(), *msg.channel_id.as_u64())?;
-    let now = std::time::Instant::now();
     let mut scores = crate::airtable::get_scores().await?;
-    println!("airtable::get took {:?}", now.elapsed());
 
     scores.sort_by_key(|score| score.score);
     scores.reverse();
 
-    let now = std::time::Instant::now();
     let mut points = Vec::new();
 
     for (i, score) in scores
@@ -31,35 +28,22 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
     {
         points.push((
             i + 1,
-            UserId::from(score.id.parse::<u64>().unwrap())
-                .to_user(&ctx)
-                .await
-                .ok(),
+            UserId::from(score.id.parse::<u64>().unwrap()),
             score.score,
         ));
     }
 
-    println!("convert id to user took {:?}", now.elapsed());
-    let now = std::time::Instant::now();
-
     let turbo_string = points
         .iter()
         .fold(String::new(), |mut acc, (position, user, score)| {
-            if let Some(user) = user {
-                acc.push_str(&format!("{}) {} – **{}** points\n", position, user, score));
-            } else {
-                acc.push_str(&format!(
-                    "{}) {} – **{}** points\n",
-                    position, "Unknown", score
-                ));
-            }
+            acc.push_str(&format!(
+                "{}) <@{}> – **{}** points\n",
+                position, user, score
+            ));
             acc
         });
 
     typing.stop();
-
-    println!("generating turbo string took {:?}", now.elapsed());
-    let now = std::time::Instant::now();
 
     msg.channel_id
         .send_message(&ctx, |m| {
@@ -67,7 +51,7 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
                 e.title("LeaderBoard")
                     .url("https://airtable.com/shrPiJuo2lTNquNu1")
                     .description(turbo_string)
-                    .thumbnail(msg.author.face())
+                    .footer(|f| f.text(msg.author.name.clone()).icon_url(msg.author.face()))
                     .colour(Colour::from_rgb(
                         *msg.author.id.as_u64() as u8,
                         (*msg.author.id.as_u64() >> 8) as u8,
@@ -76,8 +60,6 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
             })
         })
         .await?;
-
-    println!("sending the embbed message took {:?}", now.elapsed());
 
     Ok(())
 }
