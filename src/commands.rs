@@ -1,10 +1,8 @@
 use anyhow::anyhow;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{
-        id::UserId,
-        prelude::{ReactionType, User},
-    },
+    http::Typing,
+    model::{id::UserId, prelude::ReactionType},
     utils::Colour,
 };
 use serenity::{model::channel::Message, prelude::Context};
@@ -15,43 +13,53 @@ use serenity::{model::channel::Message, prelude::Context};
 #[example("")]
 #[example("20")]
 pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let scores = crate::airtable::get_scores().await?;
+    let typing = Typing::start(ctx.http.clone(), *msg.channel_id.as_u64())?;
+    let now = std::time::Instant::now();
+    let mut scores = crate::airtable::get_scores().await?;
+    println!("airtable::get took {:?}", now.elapsed());
 
-    let mut points = Vec::<(Option<User>, isize)>::new();
+    scores.sort_by_key(|score| score.score);
+    scores.reverse();
 
-    for score in scores.iter() {
+    let now = std::time::Instant::now();
+    let mut points = Vec::new();
+
+    for (i, score) in scores
+        .iter()
+        .enumerate()
+        .take(args.single::<usize>().unwrap_or(10))
+    {
         points.push((
-            UserId::from(score.id.parse::<u64>()?)
+            i + 1,
+            UserId::from(score.id.parse::<u64>().unwrap())
                 .to_user(&ctx)
                 .await
                 .ok(),
             score.score,
         ));
     }
-    points.sort_by_key(|(_user, score)| *score);
-    points.reverse();
+
+    println!("convert id to user took {:?}", now.elapsed());
+    let now = std::time::Instant::now();
+
     let turbo_string = points
         .iter()
-        .enumerate()
-        .take(args.single::<usize>().unwrap_or(10))
-        .fold(String::new(), |mut acc, (position, (user, score))| {
+        .fold(String::new(), |mut acc, (position, user, score)| {
             if let Some(user) = user {
-                acc.push_str(&format!(
-                    "{}) {} – **{}** points\n",
-                    position + 1,
-                    user,
-                    score
-                ));
+                acc.push_str(&format!("{}) {} – **{}** points\n", position, user, score));
             } else {
                 acc.push_str(&format!(
                     "{}) {} – **{}** points\n",
-                    position + 1,
-                    "Unknown",
-                    score
+                    position, "Unknown", score
                 ));
             }
             acc
         });
+
+    typing.stop();
+
+    println!("generating turbo string took {:?}", now.elapsed());
+    let now = std::time::Instant::now();
 
     msg.channel_id
         .send_message(&ctx, |m| {
@@ -68,6 +76,8 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
             })
         })
         .await?;
+
+    println!("sending the embbed message took {:?}", now.elapsed());
 
     Ok(())
 }
