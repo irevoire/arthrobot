@@ -57,6 +57,7 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
         .send_message(&ctx, |m| {
             m.embed(|e| {
                 e.title("LeaderBoard")
+                    .url("https://airtable.com/shrPiJuo2lTNquNu1")
                     .description(turbo_string)
                     .thumbnail(msg.author.face())
                     .colour(Colour::from_rgb(
