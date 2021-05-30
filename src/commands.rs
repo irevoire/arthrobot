@@ -189,3 +189,49 @@ pub async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         .await?;
     Ok(())
 }
+
+#[command]
+#[description = r#"Subtract a specific number of points to the score of any user on the server. You must be a crème to run this command"#]
+#[usage("{user} {score}")]
+#[example("@Tamo 500")]
+pub async fn sub(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let has_role = msg
+        .author
+        .has_role(
+            &ctx,
+            msg.guild_id.expect("called in wrong channel"),
+            crate::ROLE_CREMEUX,
+        )
+        .await
+        .unwrap_or(false)
+        || msg
+            .author
+            .has_role(&ctx, msg.guild_id.unwrap(), crate::ROLE_CREMISSIME)
+            .await
+            .unwrap_or(false);
+
+    if !has_role {
+        Err(anyhow!(
+            "You do not have the right to use this command. It is reserved to Crémeux's members"
+        ))?;
+    }
+
+    let user: UserId = args
+        .single()
+        .map_err(|_e| anyhow!("The first argument must be a valid user"))?;
+    let score: isize = args
+        .single()
+        .map_err(|_e| anyhow!("The score must be an integer"))?;
+
+    crate::airtable::update_score(
+        &user
+            .to_user(&ctx)
+            .await
+            .map_err(|e| anyhow!("Internal error: {}", e))?,
+        |current| current - score,
+    )
+    .await?;
+    msg.react(&ctx, "👍".parse::<ReactionType>().unwrap())
+        .await?;
+    Ok(())
+}

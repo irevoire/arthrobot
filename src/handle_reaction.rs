@@ -14,7 +14,7 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) -> CommandResult 
         Unicode(ref e) if e == "🥇" => 60_isize,
         Unicode(ref e) if e == "🥈" => 30,
         Unicode(ref e) if e == "🥉" => 10,
-        Unicode(ref e) if e.contains("🎖")=> 20,
+        Unicode(ref e) if e.contains("🎖") => 20,
         _e => return Ok(()),
     };
 
