@@ -2,6 +2,7 @@
 
 mod airtable;
 mod commands;
+mod color;
 mod handle_reaction;
 
 use crate::commands::*;

@@ -5,7 +5,6 @@ use serenity::{
         channel::{Reaction, ReactionType},
         id::ChannelId,
     },
-    utils::Colour,
 };
 
 pub async fn handle_reaction(ctx: Context, reaction: Reaction) -> CommandResult {
@@ -56,11 +55,8 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) -> CommandResult 
                             )
                             .thumbnail(winner.face())
                             .footer(|f| f.icon_url(user.face()).text(user.name))
-                            .colour(Colour::from_rgb(
-                                *winner.id.as_u64() as u8,
-                                (*winner.id.as_u64() >> 8) as u8,
-                                (*winner.id.as_u64() >> 16) as u8,
-                            ))
+                            .colour(crate::color::from_u64(winner.id.as_u64())
+                            )
                     })
                 })
                 .await?;

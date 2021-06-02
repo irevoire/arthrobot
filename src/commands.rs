@@ -3,7 +3,6 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     http::Typing,
     model::{id::UserId, prelude::ReactionType},
-    utils::Colour,
 };
 use serenity::{model::channel::Message, prelude::Context};
 
@@ -52,11 +51,7 @@ pub async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> Comman
                     .url("https://airtable.com/shrPiJuo2lTNquNu1")
                     .description(turbo_string)
                     .footer(|f| f.text(msg.author.name.clone()).icon_url(msg.author.face()))
-                    .colour(Colour::from_rgb(
-                        *msg.author.id.as_u64() as u8,
-                        (*msg.author.id.as_u64() >> 8) as u8,
-                        (*msg.author.id.as_u64() >> 16) as u8,
-                    ))
+                    .colour(crate::color::from_u64(msg.author.id.as_u64()))
             })
         })
         .await?;
@@ -87,11 +82,7 @@ pub async fn score(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                     .thumbnail(user.face())
                     .field("Balance", format!("{} points", score), false)
                     .footer(|f| f.icon_url(author.face()).text(author.name.clone()))
-                    .colour(Colour::from_rgb(
-                        *author.id.as_u64() as u8,
-                        (*author.id.as_u64() >> 8) as u8,
-                        (*author.id.as_u64() >> 16) as u8,
-                    ))
+                    .colour(crate::color::from_u64(author.id.as_u64()))
             })
         })
         .await?;

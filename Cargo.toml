@@ -10,6 +10,8 @@ edition = "2018"
 tokio = { version = "1", features = ["full"] }
 airtable-api = "0.1.29"
 serenity = { version = "0.10.5", features = ["collector"] }
+sha1 = "0.6.0"
+pastel = "0.8"
 serde = "*"
 anyhow = "*"
 kankyo = "*"
