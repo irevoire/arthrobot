@@ -13,3 +13,9 @@ serenity = { version = "0.10.5", features = ["collector"] }
 serde = "1.0.132"
 anyhow = "1.0.51"
 kankyo = "0.3.0"
+
+[profile.release]
+opt-level = "z"  # Optimize for size.
+strip = true
+lto = true
+panic = "abort"
