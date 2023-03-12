@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-airtable-api = "0.1.36"
-serenity = { version = "0.10.5", features = ["collector"] }
+airtable-api = { git = "https://github.com/irevoire/cio", branch = "rustls" }
+serenity = { version = "0.10.10", default-features = true, features = ["collector", "rustls_backend"] }
 serde = "1.0.132"
 anyhow = "1.0.51"
 kankyo = "0.3.0"
