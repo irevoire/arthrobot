@@ -21,6 +21,7 @@ use std::{collections::HashSet, env, sync::Arc};
 
 pub const ROLE_CREMISSIME: u64 = 739887430345162862;
 pub const ROLE_CREMEUX: u64 = 783333213854629958;
+pub const ROLE_CREME_PATISSIERE: u64 = 1084436282761027645;
 
 pub const SALON_BOT: u64 = 829344188344172585;
 
